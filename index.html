@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="initial-scale=1.0">
+  <title>Omnichromatic</title>
+  <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+  <style>
+    body{
+      display: flex;
+      margin: 0;
+      width: calc(100vw - (100vw - 100%));
+      height: 100vh;
+      overflow: scroll;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #000;
+      font-family: Roboto;
+    }
+
+    .color-canvas{
+      background-color: #000;
+      height: 0;
+      width: 0;
+      transition: .4s height, .4s width;
+      border-width: 2px;
+      border-color: white;
+      border-style: solid;
+      margin: 1rem;
+    }
+
+    .color-canvas.grow{
+      width: 100%;
+      height: 100%;
+    }
+
+    .button{
+      padding: .5rem;
+      border-radius: 2px;
+      color: #444;
+      background: white;
+      cursor: pointer;
+      text-decoration: none;
+      text-transform: capitalize;
+      transition: .2s transform;
+      transition-timing-function: cubic-bezier(0.34, 0.46, 0.4, 1.55);
+      display: block;
+    }
+
+    .button:hover{
+      transform: scale(1.1);
+    }
+
+    .button:active, .button:focus{
+      transform: scale(0.95);
+    }
+
+    .controls{
+      display: flex;
+      width: 512px;
+      color: #fff;
+      align-items: flex-end;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .controls > *{
+      margin-bottom: 1rem;
+    }
+
+    label{
+      max-width: 150px;
+    }
+
+    .input{
+      display: block;
+      width: 100%;
+    }
+
+    .pick-active ~ .random{
+      display: none;
+    }
+
+    .random-active ~ .pick{
+      display: none;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <label>Width<input class="input" data-js="width" type="text" value="256"></label>
+    <label>Height<input class="input" data-js="height" type="text" value="128"></label>
+    <label>Method
+      <select class="input" data-js="method">
+        <option value="one" selected>One Neighbour</option>
+        <option value="average">Average Neighbours</option>
+      </select>
+    </label>
+    <label>Nº Painters<input class="input" data-js="painters" type="number" value="75" min="1"></label>
+    <label>Seeding Mode
+      <select class="input" data-js="seedMode">
+        <option value="pick" selected>Specific</option>
+        <option value="random">Random</option>
+      </select>
+    </label>
+    <label class="random">Nº Seeds<input class="input" data-js="seedQty" type="number" value="5" min="1"></label>
+    <label class="pick">Seed Color<input class="input" data-js="seedColor" type="color" value="#ffffff"></label>
+    <label class="pick">Seed Pos
+      <select class="input" data-js="seedPos">
+        <option value="tl">Top left</option>
+        <option value="tc">Top center</option>
+        <option value="tr">Top right</option>
+        <option value="cl">Center left</option>
+        <option value="cc">Center</option>
+        <option value="cr">Center right</option>
+        <option value="bl" >Bottom left</option>
+        <option selected value="bc">Bottom center</option>
+        <option value="br">Bottom right</option>
+      </select>
+    </label>
+  </div>
+  <a class="button" data-js="start">Start</a>
+  <canvas class="color-canvas" data-js="canvas"></canvas>
+  <a class="button" data-js="download" download="Omnichromatic.png">Download image</a>
+  <script src="colors.js"></script>
+</body>
+</html>
