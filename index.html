@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="initial-scale=1.0">
-  <title>Omnichromatic</title>
+  <title>Omnichroma</title>
   <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
   <style>
     body{
       display: flex;
       margin: 0;
-      width: calc(100vw - (100vw - 100%));
-      height: 100vh;
+      min-width: fit-content;
+      min-height: 100vh;
       overflow: scroll;
       flex-direction: column;
       align-items: center;
@@ -28,6 +28,10 @@
       border-color: white;
       border-style: solid;
       margin: 1rem;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: pixelated;
+      user-select: none;
+      -moz-user-select: none;
     }
 
     .color-canvas.grow{
@@ -37,32 +41,38 @@
 
     .button{
       padding: .5rem;
-      border-radius: 2px;
-      color: #444;
-      background: white;
+      margin: .2rem;
+      border-radius: 1px;
+      border: 3px #fff solid;
+      color: #fff;
       cursor: pointer;
       text-decoration: none;
       text-transform: capitalize;
-      transition: .2s transform;
+      transition: .2s padding, .2s margin;
       transition-timing-function: cubic-bezier(0.34, 0.46, 0.4, 1.55);
       display: block;
     }
 
     .button:hover{
-      transform: scale(1.1);
+      padding: .7rem;
+      margin: 0;
     }
 
     .button:active, .button:focus{
-      transform: scale(0.95);
+      padding: .3rem;
+      margin: .4rem;
     }
 
     .controls{
       display: flex;
-      width: 512px;
+      width: 80%;
+      max-width: 1600px;
       color: #fff;
       align-items: flex-end;
       justify-content: space-between;
       flex-wrap: wrap;
+      padding-top: 1em;
+      padding-bottom: 2em;
     }
 
     .controls > *{
@@ -70,12 +80,35 @@
     }
 
     label{
+      position: relative;
       max-width: 150px;
+    }
+
+    [data-tooltip]:before{
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      border: 1px solid #fff;
+      padding: 1em;
+      margin-bottom: .5em;
+      width: 200%;
+      transform: translateX(-50%);
+      left: 50%;
+      opacity: 0;
+      transition: .2s opacity;
+      background-color: #000;
+      pointer-events: none;
+    }
+
+    [data-tooltip]:hover:before{
+      opacity: 1;
     }
 
     .input{
       display: block;
       width: 100%;
+      box-sizing: border-box;
+      padding: 0;
     }
 
     .pick-active ~ .random{
@@ -86,28 +119,71 @@
       display: none;
     }
 
+    .title{
+      position: relative;
+      font-size: 5em;
+      color: #fff;
+      background-color: #000;
+      text-transform: uppercase;
+      mix-blend-mode: lighten;
+    }
+
+    .title:before{
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      opacity: .7;
+      mix-blend-mode: multiply;
+      background-image: url("OmnichromaticTitle.png");
+      background-position-y: 50px;
+      animation-name: scrollBg;
+      animation-duration: 20s;
+      animation-iteration-count: infinite;
+      animation-timing-function: linear;
+    }
+
+    @keyframes scrollBg{
+      0%{
+        background-position-x: 0;
+      }
+      100%{
+        background-position-x: -600px;
+      }
+    }
+
   </style>
 </head>
 <body>
+  <h1 class="title">Omnichroma</h1>
   <div class="controls">
-    <label>Width<input class="input" data-js="width" type="text" value="256"></label>
-    <label>Height<input class="input" data-js="height" type="text" value="128"></label>
-    <label>Method
-      <select class="input" data-js="method">
-        <option value="one" selected>One Neighbour</option>
-        <option value="average">Average Neighbours</option>
+    <label data-tooltip="Width in pixels of the image to be generated. Larger images need a lot more time to generate.">Width<input class="input" data-js="width" type="text" value="128"></label>
+    <label data-tooltip="Height in pixels of the image to be generated. Larger images need a lot more time to generate.">Height<input class="input" data-js="height" type="text" value="128"></label>
+    <label data-tooltip="Number of painters increase the speed the image is generated. However more painters demand more processing power.">Nº Painters<input class="input" data-js="painters" type="number" value="75" min="1"></label>
+    <label data-tooltip="Changes what anchor is selected next to be painted. Try different ones out. This can be changed during image generation.">Selection Mode
+      <select class="input" data-js="selectionMode">
+        <option value="random" selected>Random</option>
+        <option value="worm">Worm - LIFO</option>
+        <option value="root">Root - FIFO</option>
       </select>
     </label>
-    <label>Nº Painters<input class="input" data-js="painters" type="number" value="75" min="1"></label>
-    <label>Seeding Mode
+    <label data-tooltip="How color proximity is evaluated. RGB is faster but less correct in terms of human perception.">Color Mode
+      <select class="input" data-js="colorComparison">
+        <option value="rgb" selected>RGB</option>
+        <option value="lab">LAB</option>
+      </select>
+    </label>
+    <label data-tooltip="A single seed however you want or however many seeds you do not control?">Seeding Mode
       <select class="input" data-js="seedMode">
         <option value="pick" selected>Specific</option>
         <option value="random">Random</option>
       </select>
     </label>
-    <label class="random">Nº Seeds<input class="input" data-js="seedQty" type="number" value="5" min="1"></label>
-    <label class="pick">Seed Color<input class="input" data-js="seedColor" type="color" value="#ffffff"></label>
-    <label class="pick">Seed Pos
+    <label data-tooltip="How many seeds should be set." class="random">Nº Seeds<input class="input" data-js="seedQty" type="number" value="5" min="1"></label>
+    <label data-tooltip="What color is the starting seed?" class="pick">Seed Color<input class="input" data-js="seedColor" type="color" value="#ffffff"></label>
+    <label data-tooltip="Where should it start?" class="pick">Seed Pos
       <select class="input" data-js="seedPos">
         <option value="tl">Top left</option>
         <option value="tc">Top center</option>
