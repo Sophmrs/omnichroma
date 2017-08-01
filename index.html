@@ -121,13 +121,19 @@
       display: none;
     }
 
+    .title-link{
+      margin-top: 3em;
+      margin-bottom: 3em;
+      text-decoration: none;
+    }
+
     .title{
       position: relative;
       font-size: 5em;
       color: #fff;
       background-color: #000;
       text-transform: uppercase;
-      overflow: hidden;
+      margin: 0;
     }
 
     .title:before{
@@ -139,11 +145,34 @@
       opacity: .8;
       mix-blend-mode: multiply;
       background-image: url("OmnichromaticTitle.png");
-      background-position-y: 61px;
+      background-position-y: 55%;
       animation-name: scrollBg;
       animation-duration: 20s;
       animation-iteration-count: infinite;
       animation-timing-function: linear;
+    }
+
+    .title:after{
+      content: '';
+      height: 100%;
+      width: 100px;
+      left: 100%;
+      position: absolute;
+      background-image: url(https://cdnjs.cloudflare.com/ajax/libs/octicons/4.4.0/svg/mark-github.svg);
+      background-color: white;
+      filter: invert(100%);
+      opacity: 0;
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      mix-blend-mode: multiply;
+    }
+
+    .title:hover:before{
+      width: calc(100% + 100px);
+    }
+
+    .title:hover:after{
+      opacity: 1;
     }
 
     @keyframes scrollBg{
@@ -158,7 +187,7 @@
   </style>
 </head>
 <body>
-  <h1 class="title">Omnichroma</h1>
+  <a class="title-link" title="Omnichroma's Github repository" href="https://github.com/Theomg/omnichroma"><h1 class="title">Omnichroma</h1></a>
   <div class="controls">
     <label data-tooltip="Width in pixels of the image to be generated. Larger images need a lot more time to generate.">Width<input class="input" data-js="width" type="text" value="128"></label>
     <label data-tooltip="Height in pixels of the image to be generated. Larger images need a lot more time to generate.">Height<input class="input" data-js="height" type="text" value="128"></label>
