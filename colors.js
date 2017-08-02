@@ -1,9 +1,7 @@
-'using strict';
-/*jshint esversion: 6 */
+"use strict";
 
 const widthInput = document.querySelector('[data-js="width"]');
 const heightInput = document.querySelector('[data-js="height"]');
-const avgRange = document.querySelector('[data-js="avgRange"]');
 const paintersQty = document.querySelector('[data-js="painters"]');
 const selectionMode = document.querySelector('[data-js="selectionMode"]');
 const colorComparison = document.querySelector('[data-js="colorComparison"]');
@@ -11,9 +9,6 @@ const seedMode = document.querySelector('[data-js="seedMode"]');
 const seedQty = document.querySelector('[data-js="seedQty"]');
 const seedColor = document.querySelector('[data-js="seedColor"]');
 const seedPos = document.querySelector('[data-js="seedPos"]');
-
-const randInputs = document.querySelectorAll('.rand');
-const pickInputs = document.querySelectorAll('.rand');
 
 const startBtn = document.querySelector('[data-js="start"]');
 const saveImageBtn = document.querySelector('[data-js="download"]');
@@ -90,7 +85,7 @@ class ColorLAB{
   }
  
   // Based on https://github.com/THEjoezack/ColorMine/blob/master/ColorMine/ColorSpaces/Comparisons/Cie94Comparison.cs
-  deltaEFrom(labColor){
+  deltaESqrFrom(labColor){
     const k1 = .045;
     const k2 = .015;
  
@@ -112,7 +107,7 @@ class ColorLAB{
     const h = dH / sH;
  
     const dESqr = l ** 2 + c ** 2 + h ** 2;
-    return dESqr < 0 ? 0 : Math.sqrt(dESqr);
+    return dESqr < 0 ? 0 : dESqr;
   }
 }
 
@@ -143,7 +138,7 @@ class Anchor {
     let curPos = new Pos(minX, minY);
     const availablePositions = [];
 
-    //Image data is a sequential array with the format rgba, if a is set the position is occupied
+    //Image data is a sequential array with the format rgba, if alpha is set the position is occupied
     for (let i = 3; i < width * height * 4; i += 4) {
       if (imgData.data[i] === 0)
         availablePositions.push(curPos);
@@ -169,10 +164,20 @@ class Anchor {
     const height = maxY - minY + 1;
 
     const imgData = ctx.getImageData(minX, minY, width, height);
+    
+    let curPos = new Pos(minX, minY);
 
     for (let i = 3; i < width * height * 4; i += 4) {
+      if(curPos.x === this.pos.x && curPos.y === this.pos.y)
+        continue;
       if (imgData.data[i] === 0)
         return true;
+
+      curPos.x++;
+      if (curPos.x > maxX) {
+        curPos.x = minX;
+        curPos.y++;
+      }
     }
     return false;
   }
@@ -192,8 +197,10 @@ class Painter {
 
       do {
         if (anchors.length === 0) {
-          console.count(`Painter finished drawing painting ${paintingNum}!`);
-          this.isPainting = false;
+          this.StopDrawing();
+          const anyPainterActive = painters.some( p => p.isPainting );
+          if(!anyPainterActive)
+            console.log(`All painters finished for painting ${paintingNum}`);
           return;
         }
 
@@ -205,13 +212,13 @@ class Painter {
         else if(selectionMode.value === 'root')
           idx = 0;
 
-        anchor = anchors.splice(idx, 1)[0];
+        anchor = RemoveItem(anchors, idx);
         canUseAnchor = anchor.hasAvailableNeighbours();
       } while (!canUseAnchor);
 
       const availablePos = anchor.getAvailableNeighbours();
       const pos = PickRandom(availablePos);
-      const color =  PickClosestColor(anchor.color);
+      const color = PickClosestColor(anchor.color);
 
       const newAnchor = new Anchor(pos, color);
       if (newAnchor.hasAvailableNeighbours()) {
@@ -225,11 +232,13 @@ class Painter {
       if (anchor.hasAvailableNeighbours()) {
         anchors.push(anchor);
       }
-      if (this.isPainting && colors.length > 0)
+      if (this.isPainting && (colors.length > 0 || anchors.length > 0))
         this.animationFrame = requestAnimationFrame(() => this.Draw());
     } else {
-      console.count(`Painter finished drawing painting ${paintingNum}!`);
-      this.isPainting = false;
+      this.StopDrawing();
+      const anyPainterActive = painters.some( p => p.isPainting );
+      if(!anyPainterActive)
+        console.log(`All painters finished for painting ${paintingNum}`);
       return;
     }
   }
@@ -247,8 +256,8 @@ class Painter {
 }
 
 function Init() {
-  width = widthInput.value;
-  height = heightInput.value;
+  width = +widthInput.value;
+  height = +heightInput.value;
 
   canvas.width = width;
   canvas.height = height;
@@ -319,35 +328,35 @@ function Start() {
         anchorPos = new Pos(0,0);
         break;
       case 'tc':
-        anchorPos = new Pos(width/2,0);
+        anchorPos = new Pos(Math.floor(width/2),0);
         break;
       case 'tr':
-        anchorPos = new Pos(width,0);
+        anchorPos = new Pos(width-1,0);
         break;
       case 'cl':
-        anchorPos = new Pos(0,height/2);
+        anchorPos = new Pos(0,Math.floor(height/2));
         break;
       case 'cc':
-        anchorPos = new Pos(width/2,height/2);
+        anchorPos = new Pos(Math.floor(width/2),Math.floor(height/2));
         break;
       case 'cr':
-        anchorPos = new Pos(width,height/2);
+        anchorPos = new Pos(width-1,Math.floor(height/2));
         break;
       case 'bl':
-        anchorPos = new Pos(0,height);
+        anchorPos = new Pos(0,height-1);
         break;
       case 'bc':
-        anchorPos = new Pos(width/2,height);
+        anchorPos = new Pos(Math.floor(width/2),height-1);
         break;
       case 'br':
-        anchorPos = new Pos(width,height);
+        anchorPos = new Pos(width-1,height-1);
         break;
     }
     //Gets each component in hex
     const hexColors = /#([a-f0-9]{2})([a-f0-9]{2})([a-f0-9]{2})/i.exec(seedColor.value).slice(1, 4);
     //Converts to decimal components
-    const [r, g, b] = hexColors.map((c) => +(`0x${c}`));
-    const anchorColor = PickClosestColor(new Color(r, g, b));
+    const rgb = hexColors.map((c) => +(`0x${c}`));
+    const anchorColor = PickClosestColor(new Color(...rgb));
     anchors.push(new Anchor(anchorPos, anchorColor));
     ctx.fillStyle = anchors[0].color.toStyle();
     ctx.fillRect(anchors[0].pos.x, anchors[0].pos.y, 1, 1);
@@ -360,6 +369,8 @@ function Start() {
     painter.StartDrawing();
     painters.push(painter);
   }
+
+  console.log(`Painting ${paintingNum} started with ${paintersQty.value} painters`);
 }
 
 function AddModeClass(){
@@ -374,7 +385,7 @@ function KbStart(e) {
 
 function PickClosestColor(color) {
   let minDist = Infinity;
-  let curColor = null;
+  let curIdx = null;
   let labColor;
 
   const labCompare = (colorComparison.value === 'lab');
@@ -383,18 +394,18 @@ function PickClosestColor(color) {
   for (let i = 0; i < colors.length; i++) {
     let dist;
     if(labCompare) {
-      dist = labColor.deltaEFrom(labColors[i]);
+      dist = labColor.deltaESqrFrom(labColors[i]);
     }
     else{
       dist = color.distanceSqrFrom(colors[i]);
     }
     if (dist < minDist) {
       minDist = dist;
-      curColor = i;
+      curIdx = i;
     }
   }
-  labColors.splice(curColor, 1);
-  return colors.splice(curColor, 1)[0];
+  RemoveItem(labColors, curIdx);
+  return RemoveItem(colors, curIdx);
 }
 
 function PickRandom(arr) {
@@ -404,4 +415,18 @@ function PickRandom(arr) {
 function DownloadImage() {
   const dataUrl = canvas.toDataURL('image/png');
   this.href = dataUrl;
+}
+
+//Faster than splice for large arrays as it doesn't shift the rest back
+function RemoveItem(arr, idx){
+    if(idx < 0 || idx >= arr.length)
+      return;
+    const last = arr.pop();
+    if(arr.length > idx)
+    {
+        const ret = arr[idx];
+        arr[idx] = last;
+        return ret;
+    }
+    return last;
 }

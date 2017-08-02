@@ -34,11 +34,6 @@
       -moz-user-select: none;
     }
 
-    .color-canvas.grow{
-      width: 100%;
-      height: 100%;
-    }
-
     .button{
       padding: .5rem;
       margin: .2rem;
@@ -189,9 +184,9 @@
 <body>
   <a class="title-link" title="Omnichroma's Github repository" href="https://github.com/Theomg/omnichroma"><h1 class="title">Omnichroma</h1></a>
   <div class="controls">
-    <label data-tooltip="Width in pixels of the image to be generated. Larger images need a lot more time to generate.">Width<input class="input" data-js="width" type="text" value="128"></label>
+    <label data-tooltip="Width in pixels of the image to be generated. Larger images need a lot more time to generate.">Width<input class="input" data-js="width" type="text" value="256"></label>
     <label data-tooltip="Height in pixels of the image to be generated. Larger images need a lot more time to generate.">Height<input class="input" data-js="height" type="text" value="128"></label>
-    <label data-tooltip="Number of painters increase the speed the image is generated. However more painters demand more processing power.">Nº Painters<input class="input" data-js="painters" type="number" value="75" min="1"></label>
+    <label data-tooltip="Number of painters increase the speed the image is generated. However more painters demand more processing power.">Nº Painters<input class="input" data-js="painters" type="number" min="1" value="45"></label>
     <label data-tooltip="Changes what anchor is selected next to be painted. Try different ones out. This can be changed during image generation.">Selection Mode
       <select class="input" data-js="selectionMode">
         <option value="random" selected>Random</option>
