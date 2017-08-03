@@ -1,0 +1,20 @@
+{
+  "name": "omnichromatic",
+  "version": "1.0.0",
+  "description": "An omnichromatic image generator",
+  "main": "colors.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "compile": "babel colors.js --presets latest --out-file colors-compiled.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Theomg/omnichroma"
+  },
+  "author": "Theo Menkes Reis",
+  "license": "SEE LICENSE IN license.md",
+  "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-preset-latest": "^6.24.1"
+  }
+}
