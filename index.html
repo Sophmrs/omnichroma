@@ -60,11 +60,11 @@
 
     .controls{
       display: flex;
-      width: 80%;
+      width: 80vw;
       max-width: 1600px;
       color: #fff;
       align-items: flex-end;
-      justify-content: space-between;
+      justify-content: space-around;
       flex-wrap: wrap;
       padding-top: 1em;
       padding-bottom: 2em;
@@ -76,7 +76,7 @@
 
     label{
       position: relative;
-      max-width: 150px;
+      width: 120px;
       margin-left: .5em;
       margin-right: .5em;
     }
@@ -117,14 +117,15 @@
     }
 
     .title-link{
-      margin-top: 3em;
-      margin-bottom: 3em;
+      margin-top: 4vh;
+      margin-bottom: 4vh;
       text-decoration: none;
     }
 
     .title{
       position: relative;
       font-size: 5em;
+      font-size: calc(5vw + 1em);
       color: #fff;
       background-color: #000;
       text-transform: uppercase;
@@ -140,7 +141,8 @@
       opacity: .8;
       mix-blend-mode: multiply;
       background-image: url("OmnichromaticTitle.png");
-      background-position-y: 55%;
+      background-position-y: 5600%;
+      background-size: 600px 99%;
       animation-name: scrollBg;
       animation-duration: 20s;
       animation-iteration-count: infinite;
@@ -150,7 +152,7 @@
     .title:after{
       content: '';
       height: 100%;
-      width: 100px;
+      width: 6vw;
       left: 100%;
       position: absolute;
       background-image: url(https://cdnjs.cloudflare.com/ajax/libs/octicons/4.4.0/svg/mark-github.svg);
@@ -163,7 +165,7 @@
     }
 
     .title:hover:before{
-      width: calc(100% + 100px);
+      width: calc(100% + 6vw);
     }
 
     .title:hover:after{
