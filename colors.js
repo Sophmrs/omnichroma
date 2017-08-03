@@ -154,6 +154,7 @@ class Anchor {
     return availablePositions;
   }
 
+  
   hasAvailableNeighbours() {
     const minX = Math.max(0, this.pos.x - 1);
     const maxX = Math.min(ctx.canvas.width - 1, this.pos.x + 1);
@@ -164,20 +165,10 @@ class Anchor {
     const height = maxY - minY + 1;
 
     const imgData = ctx.getImageData(minX, minY, width, height);
-    
-    let curPos = new Pos(minX, minY);
 
     for (let i = 3; i < width * height * 4; i += 4) {
-      if(curPos.x === this.pos.x && curPos.y === this.pos.y)
-        continue;
       if (imgData.data[i] === 0)
         return true;
-
-      curPos.x++;
-      if (curPos.x > maxX) {
-        curPos.x = minX;
-        curPos.y++;
-      }
     }
     return false;
   }
@@ -212,7 +203,7 @@ class Painter {
         else if(selectionMode.value === 'root')
           idx = 0;
 
-        anchor = RemoveItem(anchors, idx);
+        anchor = anchors.splice(idx, 1)[0];
         canUseAnchor = anchor.hasAvailableNeighbours();
       } while (!canUseAnchor);
 
