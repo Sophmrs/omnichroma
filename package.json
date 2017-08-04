@@ -5,16 +5,18 @@
   "main": "colors.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "compile": "babel colors.js --presets latest --out-file colors-compiled.js"
+    "compile": "babel colors.js --presets latest --out-file colors-compiled.js",
+    "watch": "onchange \"colors.js\" -- npm run compile"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Theomg/omnichroma"
+    "url": "https://github.com/Sophmrs/omnichroma"
   },
-  "author": "Theo Menkes Reis",
+  "author": "Sophia Menkes Reis",
   "license": "SEE LICENSE IN license.md",
   "devDependencies": {
     "babel-cli": "^6.24.1",
-    "babel-preset-latest": "^6.24.1"
+    "babel-preset-latest": "^6.24.1",
+    "onchange": "^3.2.1"
   }
 }

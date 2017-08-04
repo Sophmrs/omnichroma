@@ -22,9 +22,48 @@ var startBtn = document.querySelector('[data-js="start"]');
 var saveImageBtn = document.querySelector('[data-js="download"]');
 
 var canvas = document.querySelector('[data-js="canvas"]');
-var ctx = canvas.getContext('2d');
 
-var paintingNum = 0;
+var isUsingGL = false;
+var glCtx = void 0;
+try {
+  isUsingGL = true;
+  glCtx = canvas.getContext("webgl", { depth: false, preserveDrawingBuffer: true });
+} catch (e) {
+  console.alert("Failed to get webGL context, falling back to 2d canvas");
+  isUsingGL = false;
+  glCtx = null;
+}
+var ctx = glCtx || canvas.getContext('2d');
+
+var vert = '\n  attribute vec2 coords;\n  attribute vec3 color;\n\n  varying lowp vec3 vertColor;\n\n  void main(void){\n    gl_PointSize = 1.0;\n    gl_Position = vec4(coords, 1.0, 1.0);\n    vertColor = color;\n  }\n';
+
+var frag = '\n  varying lowp vec3 vertColor;\n\n  void main(void){\n    gl_FragColor = vec4(vertColor, 1.0);\n  }\n';
+
+var coordsAttr = void 0;
+var colorsAttr = void 0;
+
+if (isUsingGL) {
+  var vertShader = ctx.createShader(ctx.VERTEX_SHADER);
+  ctx.shaderSource(vertShader, vert);
+  ctx.compileShader(vertShader);
+
+  var fragShader = ctx.createShader(ctx.FRAGMENT_SHADER);
+  ctx.shaderSource(fragShader, frag);
+  ctx.compileShader(fragShader);
+
+  var shaderProgram = ctx.createProgram();
+  ctx.attachShader(shaderProgram, vertShader);
+  ctx.attachShader(shaderProgram, fragShader);
+
+  ctx.linkProgram(shaderProgram);
+
+  ctx.useProgram(shaderProgram);
+
+  coordsAttr = ctx.getAttribLocation(shaderProgram, 'coords');
+  colorsAttr = ctx.getAttribLocation(shaderProgram, 'color');
+}
+
+var occupiedPos = [];
 
 var colorDepth = void 0;
 var colorSkip = void 0;
@@ -38,6 +77,10 @@ var height = void 0;
 
 var painters = [];
 
+var paintingNum = 0;
+var paintStartTime = void 0;
+var paintEndTime = void 0;
+
 saveImageBtn.addEventListener('click', DownloadImage);
 startBtn.addEventListener('click', Start);
 seedMode.addEventListener('change', AddModeClass);
@@ -45,11 +88,14 @@ document.body.addEventListener('keypress', KbStart);
 
 var Color = function () {
   function Color(r, g, b) {
+    var a = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
+
     _classCallCheck(this, Color);
 
     this.r = Math.round(r);
     this.g = Math.round(g);
     this.b = Math.round(b);
+    this.a = a;
   }
 
   _createClass(Color, [{
@@ -166,48 +212,42 @@ var Anchor = function () {
   _createClass(Anchor, [{
     key: 'getAvailableNeighbours',
     value: function getAvailableNeighbours() {
+      var canvasWidth = ctx.canvas.width;
+      var canvasHeight = ctx.canvas.height;
+
       var minX = Math.max(0, this.pos.x - 1);
-      var maxX = Math.min(ctx.canvas.width - 1, this.pos.x + 1);
+      var maxX = Math.min(canvasWidth - 1, this.pos.x + 1);
       var minY = Math.max(0, this.pos.y - 1);
-      var maxY = Math.min(ctx.canvas.height - 1, this.pos.y + 1);
+      var maxY = Math.min(canvasHeight - 1, this.pos.y + 1);
 
-      var width = maxX - minX + 1;
-      var height = maxY - minY + 1;
-
-      var imgData = ctx.getImageData(minX, minY, width, height);
-
-      var curPos = new Pos(minX, minY);
       var availablePositions = [];
 
-      //Image data is a sequential array with the format rgba, if alpha is set the position is occupied
-      for (var i = 3; i < width * height * 4; i += 4) {
-        if (imgData.data[i] === 0) availablePositions.push(curPos);
-
-        var newPos = new Pos(curPos.x, curPos.y);
-        newPos.x++;
-        if (newPos.x > maxX) {
-          newPos.x = minX;
-          newPos.y++;
+      for (var i = minX; i <= maxX; i++) {
+        for (var j = minY; j <= maxY; j++) {
+          if (!occupiedPos[i + j * canvasWidth]) {
+            availablePositions.push(new Pos(i, j));
+          }
         }
-        curPos = newPos;
       }
       return availablePositions;
     }
   }, {
     key: 'hasAvailableNeighbours',
     value: function hasAvailableNeighbours() {
+      var canvasWidth = ctx.canvas.width;
+      var canvasHeight = ctx.canvas.height;
+
       var minX = Math.max(0, this.pos.x - 1);
-      var maxX = Math.min(ctx.canvas.width - 1, this.pos.x + 1);
+      var maxX = Math.min(canvasWidth - 1, this.pos.x + 1);
       var minY = Math.max(0, this.pos.y - 1);
-      var maxY = Math.min(ctx.canvas.height - 1, this.pos.y + 1);
+      var maxY = Math.min(canvasHeight - 1, this.pos.y + 1);
 
-      var width = maxX - minX + 1;
-      var height = maxY - minY + 1;
-
-      var imgData = ctx.getImageData(minX, minY, width, height);
-
-      for (var i = 3; i < width * height * 4; i += 4) {
-        if (imgData.data[i] === 0) return true;
+      for (var i = minX; i <= maxX; i++) {
+        for (var j = minY; j <= maxY; j++) {
+          if (!occupiedPos[i + j * canvasWidth]) {
+            return true;
+          }
+        }
       }
       return false;
     }
@@ -239,12 +279,21 @@ var Painter = function () {
             var anyPainterActive = painters.some(function (p) {
               return p.isPainting;
             });
-            if (!anyPainterActive) console.log('All painters finished for painting ' + paintingNum);
+            if (!anyPainterActive) {
+              paintEndTime = Date.now();
+              console.log('All painters finished in ' + (paintEndTime - paintStartTime) / 1000 + 's for painting ' + paintingNum);
+            }
             return;
           }
 
           var idx = void 0;
-          if (selectionMode.value === 'random') idx = anchors.indexOf(PickRandom(anchors));else if (selectionMode.value === 'worm') idx = anchors.length - 1;else if (selectionMode.value === 'root') idx = 0;
+          if (selectionMode.value === 'random') {
+            idx = anchors.indexOf(PickRandom(anchors));
+          } else if (selectionMode.value === 'worm') {
+            idx = anchors.length - 1;
+          } else if (selectionMode.value === 'root') {
+            idx = 0;
+          }
 
           anchor = anchors.splice(idx, 1)[0];
           canUseAnchor = anchor.hasAvailableNeighbours();
@@ -259,22 +308,26 @@ var Painter = function () {
           anchors.push(newAnchor);
         }
 
-        ctx.fillStyle = color.toStyle();
-        ctx.fillRect(pos.x, pos.y, 1, 1);
+        PaintPoint(pos, color);
 
         //Add anchor back if it still has available neighbours
         if (anchor.hasAvailableNeighbours()) {
           anchors.push(anchor);
         }
-        if (this.isPainting && (colors.length > 0 || anchors.length > 0)) this.animationFrame = requestAnimationFrame(function () {
-          return _this.Draw();
-        });
+        if (this.isPainting && (colors.length > 0 || anchors.length > 0)) {
+          this.animationFrame = requestAnimationFrame(function () {
+            return _this.Draw();
+          });
+        }
       } else {
         this.StopDrawing();
         var _anyPainterActive = painters.some(function (p) {
           return p.isPainting;
         });
-        if (!_anyPainterActive) console.log('All painters finished for painting ' + paintingNum);
+        if (!_anyPainterActive) {
+          paintEndTime = Date.now();
+          console.log('All painters finished in ' + (paintEndTime - paintStartTime) / 1000 + 's for painting ' + paintingNum);
+        }
         return;
       }
     }
@@ -306,13 +359,21 @@ function Init() {
 
   canvas.width = width;
   canvas.height = height;
+  if (isUsingGL) {
+    ctx.viewport(0, 0, canvas.width, canvas.height);
+  }
 
   //Bits of colors per channel
   colorDepth = Math.pow(2, (Math.log2(width) + Math.log2(height)) / 3);
   //Used to fill the color array with the necessary colors
   colorSkip = 256 / colorDepth;
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (isUsingGL) {
+    ctx.clearColor(0, 0, 0, 0);
+    ctx.clear(ctx.COLOR_BUFFER_BIT);
+  } else {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
 
   //Trigger transition
   setTimeout(function () {
@@ -332,6 +393,7 @@ function Start() {
   colors = [];
   labColors = [];
   anchors = [];
+  occupiedPos = [];
 
   //Set all colors
   for (var _i2 = 0; _i2 < colorDepth; _i2++) {
@@ -343,25 +405,33 @@ function Start() {
     }
   }
 
+  //Set all positions as free
+  for (var _i3 = 0; _i3 < width * height; _i3++) {
+    occupiedPos[_i3] = false;
+  }
+
   while (painters.length > 0) {
     painters.pop().StopDrawing();
   }
 
   //Seeds with initial anchors
   if (seedMode.value === 'random') {
-    if (seedQty.value < 1) seedQty.value = 1;
+    if (seedQty.value < 1) {
+      seedQty.value = 1;
+    }
     for (var i = 0; i < seedQty.value; i++) {
       var randPos = void 0;
       var canUsePos = false;
       do {
         randPos = new Pos(Math.floor(Math.random() * width), Math.floor(Math.random() * height));
-        var posAlpha = ctx.getImageData(randPos.x, randPos.y, 1, 1).data[3];
-        if (posAlpha === 0) canUsePos = true;
+        if (!occupiedPos[randPos.x + randPos.y * width]) {
+          canUsePos = true;
+        }
       } while (!canUsePos);
       var randColor = colors.splice(Math.floor(Math.random() * colors.length), 1)[0];
       anchors.push(new Anchor(randPos, randColor));
-      ctx.fillStyle = anchors[i].color.toStyle();
-      ctx.fillRect(anchors[i].pos.x, anchors[i].pos.y, 1, 1);
+
+      PaintPoint(anchors[i].pos, anchors[i].color);
     }
   } else if (seedMode.value === 'pick') {
     var anchorPos = void 0;
@@ -394,26 +464,52 @@ function Start() {
         anchorPos = new Pos(width - 1, height - 1);
         break;
     }
+    if (seedColor.value[0] !== '#') {
+      seedColor.value = '#' + seedColor.value;
+    }
+    var regexColor = /#([a-f0-9]{1,2})([a-f0-9]{1,2})([a-f0-9]{1,2})/;
+    if (!regexColor.test(seedColor.value)) {
+      seedColor.value = "#ffffff";
+    }
     //Gets each component in hex
-    var hexColors = /#([a-f0-9]{2})([a-f0-9]{2})([a-f0-9]{2})/i.exec(seedColor.value).slice(1, 4);
+    var hexColors = regexColor.exec(seedColor.value).slice(1, 4);
     //Converts to decimal components
     var rgb = hexColors.map(function (c) {
+      if (c.length === 1) {
+        c = c + c;
+      }
       return +('0x' + c);
     });
     var anchorColor = PickClosestColor(new (Function.prototype.bind.apply(Color, [null].concat(_toConsumableArray(rgb))))());
     anchors.push(new Anchor(anchorPos, anchorColor));
-    ctx.fillStyle = anchors[0].color.toStyle();
-    ctx.fillRect(anchors[0].pos.x, anchors[0].pos.y, 1, 1);
+    PaintPoint(anchors[0].pos, anchors[0].color);
   }
 
-  if (paintersQty.value <= 0) paintersQty.value = 1;
-  for (var _i3 = 0; _i3 < paintersQty.value; _i3++) {
+  if (paintersQty.value <= 0) {
+    paintersQty.value = 1;
+  }
+  for (var _i4 = 0; _i4 < paintersQty.value; _i4++) {
     var painter = new Painter();
     painter.StartDrawing();
     painters.push(painter);
   }
 
   console.log('Painting ' + paintingNum + ' started with ' + paintersQty.value + ' painters');
+  paintStartTime = Date.now();
+}
+
+function PaintPoint(pos, color) {
+  occupiedPos[pos.x + pos.y * width] = true;
+  if (isUsingGL) {
+    var x = (.5 + pos.x - width / 2) / (width / 2);
+    var y = (height / 2 - pos.y) / (height / 2);
+    ctx.vertexAttrib2f(coordsAttr, x, y);
+    ctx.vertexAttrib3f(colorsAttr, color.r / 256, color.g / 256, color.b / 256);
+    ctx.drawArrays(ctx.POINTS, 0, 1);
+  } else {
+    ctx.fillStyle = color.toStyle();
+    ctx.fillRect(pos.x, pos.y, 1, 1);
+  }
 }
 
 function AddModeClass() {
@@ -422,7 +518,9 @@ function AddModeClass() {
 }
 
 function KbStart(e) {
-  if (e.keyCode === 13) Start();
+  if (e.keyCode === 13) {
+    Start();
+  }
 }
 
 function PickClosestColor(color) {
@@ -431,7 +529,9 @@ function PickClosestColor(color) {
   var labColor = void 0;
 
   var labCompare = colorComparison.value === 'lab';
-  if (labCompare) labColor = color.toColorLAB();
+  if (labCompare) {
+    labColor = color.toColorLAB();
+  }
   for (var i = 0; i < colors.length; i++) {
     var dist = void 0;
     if (labCompare) {
@@ -459,7 +559,9 @@ function DownloadImage() {
 
 //Faster than splice for large arrays as it doesn't shift the rest back
 function RemoveItem(arr, idx) {
-  if (idx < 0 || idx >= arr.length) return;
+  if (idx < 0 || idx >= arr.length) {
+    return;
+  }
   var last = arr.pop();
   if (arr.length > idx) {
     var ret = arr[idx];
