@@ -395,8 +395,8 @@ function PickClosestColor(color) {
       curIdx = i;
     }
   }
-  RemoveItem(labColors, curIdx);
-  return RemoveItem(colors, curIdx);
+  labColors.splice(curIdx, 1);
+  return colors.splice(curIdx, 1)[0];
 }
 
 function PickRandom(arr) {
@@ -406,18 +406,4 @@ function PickRandom(arr) {
 function DownloadImage() {
   const dataUrl = canvas.toDataURL('image/png');
   this.href = dataUrl;
-}
-
-//Faster than splice for large arrays as it doesn't shift the rest back
-function RemoveItem(arr, idx){
-    if(idx < 0 || idx >= arr.length)
-      return;
-    const last = arr.pop();
-    if(arr.length > idx)
-    {
-        const ret = arr[idx];
-        arr[idx] = last;
-        return ret;
-    }
-    return last;
 }
