@@ -9,12 +9,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Theomg/omnichroma"
+    "url": "https://github.com/Sophmrs/omnichroma"
   },
-  "author": "Theo Menkes Reis",
+  "author": "Sophia Menkes Reis",
   "license": "SEE LICENSE IN license.md",
   "devDependencies": {
-    "babel-cli": "^6.24.1",
+    "babel-cli": "^6.26.0",
     "babel-preset-latest": "^6.24.1"
   }
 }
